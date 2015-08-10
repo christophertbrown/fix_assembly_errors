@@ -83,7 +83,28 @@ def check_mismatches(read, pair, mismatches, mm_option, req_map):
             return True 
     return False
 
-def reads_from_mapping(mapping, contigs, mismatches, mm_option, req_map):
+def get_overlap(a, b):
+    """
+    report overlap of coordinates
+    """
+    return max(0, min(a[1], b[1]) - max(a[0], b[0]))
+
+def check_region(read, pair, region):
+    """
+    determine whether or not reads map to specific region of scaffold
+    """
+    if region is False:
+        return True
+    for mapping in read, pair:
+        if mapping is False:
+            continue
+        start, length = int(mapping[3]), len(mapping[9])
+        r = [start, start + length - 1] 
+        if get_overlap(r, region) > 0:
+            return True
+    return False
+
+def reads_from_mapping(mapping, contigs, mismatches, mm_option, req_map, region):
     c = cycle([1, 2])
     for line in mapping:
         line = line.strip().split()
@@ -101,6 +122,8 @@ def reads_from_mapping(mapping, contigs, mismatches, mm_option, req_map):
         if int(line[1]) <= 20: # is this from a single read?
             if contigs is False or line[2] in contigs:
                 if check_mismatches(line, False, mismatches, mm_option, req_map) is True:
+                    if check_region(line, False, region) is False:
+                        continue
                     yield [1, sam2fastq(line)]
                     yield [10, line]
         else:
@@ -109,6 +132,8 @@ def reads_from_mapping(mapping, contigs, mismatches, mm_option, req_map):
                 if contigs is False:
                     if prev[2] != '*' or line[2] != '*':
                         if check_mismatches(line, prev, mismatches, mm_option, req_map) is True:
+                            if check_region(line, prev, region) is False:
+                                continue
                             yield [2, sam2fastq(prev)]
                             yield [20, prev]
                             yield [2, sam2fastq(line)]
@@ -116,6 +141,8 @@ def reads_from_mapping(mapping, contigs, mismatches, mm_option, req_map):
                 else:
                     if prev[2] in contigs or line[2] in contigs:
                         if check_mismatches(line, prev, mismatches, mm_option, req_map) is True:
+                            if check_region(line, prev, region) is False:
+                                continue
                             yield [2, sam2fastq(prev)]
                             yield [20, prev]
                             yield [2, sam2fastq(line)]
@@ -123,21 +150,23 @@ def reads_from_mapping(mapping, contigs, mismatches, mm_option, req_map):
             prev = line
 
 def get_reads(sam, \
-        contigs = False, mismatches = False, mm_option = False, sort_sam = True, req_map = False):
+        contigs = False, mismatches = False, mm_option = False, \
+        sort_sam = True, req_map = False, region = False, sbuffer = False):
     """
     get mapped reads (and their pairs) from an unsorted sam file
     """
+    tempdir = '%s/' % (os.path.abspath(sam).rsplit('/', 1)[0])
     if sort_sam is True:
         mapping = '%s.sorted.sam' % (sam.rsplit('.', 1)[0])
         if sam != '-':
             if os.path.exists(mapping) is False:
-                os.system("cat %s | \
-                    sort -k1 --buffer-size=5000M -o %s\
-                    " % (sam, mapping)) 
+                os.system("\
+                    sort -k1 --buffer-size=%sG -T %s -o %s %s\
+                    " % (sbuffer, tempdir, mapping, sam)) 
         else:
             mapping = 'stdin-sam.sorted.sam'
-            p = Popen("sort -k1 --buffer-size=5000M -o %s" \
-                    % (mapping), stdin = sys.stdin, shell = True) 
+            p = Popen("sort -k1 --buffer-size=%sG -T %s -o %s" \
+                    % (sbuffer, tempdir, mapping), stdin = sys.stdin, shell = True) 
             p.communicate()
         mapping = open(mapping)
     else:
@@ -145,13 +174,13 @@ def get_reads(sam, \
             mapping = sys.stdin
         else:
             mapping = open(sam)
-    for read in reads_from_mapping(mapping, contigs, mismatches, mm_option, req_map):
+    for read in reads_from_mapping(mapping, contigs, mismatches, mm_option, req_map, region):
         yield read
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description = '# filter sam file based on mismatches')
     parser.add_argument(\
-            '-s', required = True, help = 'path to sam file')
+            '-s', required = True, help = 'path to sorted sam file (- for stdin)')
     parser.add_argument(\
             '-m', required = True, help = 'maximum number of mismatches (or False to include all mapped)')
     parser.add_argument(\
@@ -161,18 +190,30 @@ if __name__ == '__main__':
     parser.add_argument(\
             '-o', default = False, help = 'name for new sam file')
     parser.add_argument(\
-            '-f', default = False, help = 'filter based on scaffold name (single name or list from stdin (-))')
+            '-f', default = False, help = 'filter based on scaffold name (single name or - if list from stdin)')
+    parser.add_argument(\
+            '-c', default = False, help = 'report reads mapped to region of scaffold (e.g. 1-500)')
     parser.add_argument(\
             '-r', action = 'store_true', help = 'print mapped paired reads to stdout and single reads to stderr')
     parser.add_argument(\
-            '-n', action = 'store_false', help = 'do not sort sam file')
+            '--sort', action = 'store_true', help = 'sort the sam file')
+    parser.add_argument(\
+            '-b', default = "100", help = 'buffer size (GB) to use when sorting sam file (default = 100)')
     args = vars(parser.parse_args())
     # is -o or -r specified? If not, script won't output anything
     if args['o'] is False and args['r'] is False:
         print '# specify -o and/or -r'
         exit()
     sam, contigs, mismatches, mm_option, new_sam = args['s'], args['f'], args['m'], args['p'], args['o']
-    print_reads, sort_sam, req_map = args['r'], args['n'], args['require_mapping']
+    print_reads, sort_sam, req_map = args['r'], args['sort'], args['require_mapping']
+    region = args['c']
+    sbuffer = args['b']
+    # convert region to list
+    if region is not False:
+        if '-' not in region:
+            print '# specify range with -c (e.g. 1-500)'
+            exit()
+        region = [int(i) for i in region.split('-')]
     if mismatches == 'False' or mismatches == 'FALSE' or mismatches == 'false':
         mismatches = False
     if mismatches is False: # just to make sure mm_option is not specified if mismatches is not specified
@@ -187,7 +228,7 @@ if __name__ == '__main__':
         contigs = [i.strip() for i in sys.stdin]
     if new_sam is not False:
         new_sam = open(new_sam, 'w')
-    for type, read in get_reads(sam, contigs, mismatches, mm_option, sort_sam, req_map):
+    for type, read in get_reads(sam, contigs, mismatches, mm_option, sort_sam, req_map, region, sbuffer):
         if type == 1:
             if print_reads is True:
                 print >> sys.stderr, '\n'.join(read)
