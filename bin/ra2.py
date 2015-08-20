@@ -14,6 +14,11 @@ Script for fixing scaffolding errors.
 
 Chris Brown
 ctb@berkeley.edu
+
+to-do
+* add length of errors to report
+* check bowtie insert length parameters
+* save log of bowtie commands
 """
 
 # python modules
@@ -28,6 +33,7 @@ import json
 import shutil
 
 # ctb modules
+sys.path.append('/home/cbrown/bioscripts/bin')
 import mapped as map_tool
 from fastq_split import split as fastq_split
 from nr_fasta import de_rep as fix_fasta
@@ -1061,11 +1067,11 @@ if __name__ == '__main__':
             '-m', required = False, default = 1, type = int, \
             help = 'number of mismatches tolerated during mapping (default = 1)')
     parser.add_argument(\
-            '-c', required = False, default = 2, \
+            '-c', required = False, default = 2, type = int, \
             help = 'number of mismatches tolerated during re-assembly read recruitment (applies to one read in pair; default = 2)')
     parser.add_argument(\
-            '-t', required = False, default = 6, type = int, \
-            help = 'number of threads (default = 6)')
+            '-w', required = False, default = 1000, type = int, \
+            help = 'size of re-assembly window around errors (default = 1000)')
     parser.add_argument(\
             '--mask', action = 'store_true', \
             help = 'mask errors that could not be corrected')
@@ -1093,14 +1099,18 @@ if __name__ == '__main__':
     parser.add_argument(\
             '-ff', action = 'store_true', \
             help = 'force continue from previous run (not recommended)')
+    parser.add_argument(\
+            '-t', required = False, default = 6, type = int, \
+            help = 'number of threads (default = 6)')
     args = vars(parser.parse_args())
     one, two, inter = find_reads(args['1'], args['2'], args['12'], \
             args['json'], args['reads'], args['read_list'])
     fasta = args['i']
+    window = args['w']
     prefix = '%s.curated' % (fasta.split('/')[-1].rsplit('.', 1)[0])
     check_previous(prefix, args['f'], args['ff'])
     curate_assembly(fasta, inter, [one, two], prefix, \
             threads = args['t'], mismatches = args['m'], \
             collection_mismatches = args['c'], break_scaffolds = args['break'], \
             extend_scaffolds = args['extend'], save_mapping = args['mapping'], save_int = args['save_int'], \
-            add_Ns = args['add_Ns'], mask = args['mask'], ignore_insert = args['ignore_insert_cov'])
+            add_Ns = args['add_Ns'], mask = args['mask'], ignore_insert = args['ignore_insert_cov'], window = window)

@@ -19,9 +19,9 @@ def run(out, outdir, command, mv = False, special = False, silent = False):
                     print command
         	os.system(command)
 		if mv is not False:
-                    contigs = '%s/%s/contigs.fa %s' % (mv[0], mv[1], out)
+                    contigs = '%s/%s/contigs.fa' % (mv[0], mv[1])
                     if check(contigs) is True:
-                        os.system('mv %s' % (contigs))
+                        os.system('mv %s %s' % (contigs, out))
 
 def check_type(reads):
 	for line in open(reads):
