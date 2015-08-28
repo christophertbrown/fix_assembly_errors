@@ -113,8 +113,6 @@ def errors_from_cov(s2c, cov_thresh):
         prev = False
         for pos, c in enumerate(cov):
             if check_cov(c, cov_thresh) is False:
-                if pos == 100 and errors[scaf][-1] == 0:
-                    errors[scaf].append(pos)
                 if prev is True:
                     continue
                 prev = True
