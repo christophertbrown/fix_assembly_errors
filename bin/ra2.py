@@ -33,6 +33,7 @@ import json
 import shutil
 
 # ctb modules
+sys.path.append('/home/cbrown/bioscripts/bin')
 import mapped as map_tool
 from fastq_split import split as fastq_split
 from nr_fasta import de_rep as fix_fasta
