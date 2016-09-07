@@ -16,7 +16,7 @@ ra2.py output will be in <genome>.curated directory: 
 * re_assembled.fa: curated genome
 * re_assembled.report.txt: report (e = extended, n = error that was not fixed, f = error that was fixed, b = scaffold broken at error)
 
-See genome_curation_using_ra2.rtf for more information and example usage in the context of genome curation. 
+See genome_curation_using_ra2.pdf for more information and example usage in the context of genome curation. 
 
 mapped.py is a script for filtering SAM files based on the number of mismatches in the read mapping. 
 
