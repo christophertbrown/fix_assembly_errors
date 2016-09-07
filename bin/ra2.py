@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/env python3
 
 """
 Script for fixing scaffolding errors.
@@ -108,7 +108,7 @@ def errors_from_cov(s2c, cov_thresh):
     identify errors based on coverage threshold
     """
     errors = {} # errors[scaffold] = [position of errors]
-    for scaf, cov in s2c.items():
+    for scaf, cov in list(s2c.items()):
         errors[scaf] = []
         prev = False
         for pos, c in enumerate(cov):
@@ -205,16 +205,16 @@ def id_errors(pairs, header, assembly, scaffolds, \
         # open sam file for writing
         out = open('%s.both.sam' % (assembly.rsplit('.', 1)[0]), 'w')
         for line in header:
-            print >> out, line
+            print(line, file=out)
     # s2c[scaffold] = [[coverage per position, # reads connecting base to the next base], [p2, pn2]]
-    s2c = {id: [[0, False, False] for i in range(0, info[1])] for id, info in scaffolds.items()}
+    s2c = {id: [[0, False, False] for i in range(0, info[1])] for id, info in list(scaffolds.items())}
     # filter reads
-    for read in pairs.values():
+    for read in list(pairs.values()):
         bit, mate, maps, fastq = read
         if mate not in pairs:
             continue
         mate = pairs[mate]
-        for scaffold, mappings in maps.items():
+        for scaffold, mappings in list(maps.items()):
             for mapping in mappings:
                 overlap, mm, sam_info = mapping
                 if scaffold not in mate[2]:
@@ -234,7 +234,7 @@ def id_errors(pairs, header, assembly, scaffolds, \
                         continue
                     sam = mapping[2][0] + [read[3][1]] + [read[3][3]] + mapping[2][1]
                     if save_mapping is True:
-                        print >> out, '\t'.join(sam)
+                        print('\t'.join(sam), file=out)
                     s2c = add_coverage(scaffold, scaffolds, overlap, s2c, sam, window)
     errors = errors_from_cov(s2c, cov_thresh)
     return s2c, errors
@@ -246,7 +246,7 @@ def define_windows(scaffolds, s2errors, window, combine_windows):
     """
     # define windows
     s2windows = {} # s2windows[scaffold][error] = [window]
-    for scaffold, errors in s2errors.items():
+    for scaffold, errors in list(s2errors.items()):
         if len(errors) == 0:
             continue
         s2windows[scaffold] = {}
@@ -255,12 +255,12 @@ def define_windows(scaffolds, s2errors, window, combine_windows):
             if start < 0:
                 start = 0
                 stop = window
-                if stop > scaffolds[scaffold]:
-                    stop = scaffolds[scaffold]
+                if stop > scaffolds[scaffold][1]:
+                    stop = scaffolds[scaffold][1]
             else:
                 stop = (error + int(window/2))
-                if stop > scaffolds[scaffold]:
-                    stop = scaffolds[scaffold]
+                if stop > scaffolds[scaffold][1]:
+                    stop = scaffolds[scaffold][1]
                     start = stop - window
                     if start < 0:
                         start = 0
@@ -271,7 +271,7 @@ def define_windows(scaffolds, s2errors, window, combine_windows):
     updated = {}
     for scaffold in s2windows:
         updated[scaffold] = {}
-        errors = sorted(s2windows[scaffold].items(), key = lambda x: x[0])
+        errors = sorted(list(s2windows[scaffold].items()), key = lambda x: x[0])
         if len(errors) > 1:
             i = 1
             for error in errors[1:]:
@@ -310,7 +310,7 @@ def map2window(scaffold, s2windows, s2errors, overlap, m_overlap):
     if scaffold not in s2windows:
         return False
     errors = s2windows[scaffold]
-    for error, window in errors.items():
+    for error, window in list(errors.items()):
         if check_overlap(overlap, window) is True or check_overlap(m_overlap, window) is True:
             matches.append(error)
     if len(matches) == 0:
@@ -329,7 +329,7 @@ def collect_reads(pairs, assembly, scaffolds, mismatches, \
     """
     # make files for reads
     reads = {} # reads[scaffold][error] = pe
-    for scaffold, errors in s2windows.items():
+    for scaffold, errors in list(s2windows.items()):
         if len(errors) == 0:
             continue
         reads[scaffold] = {}
@@ -339,13 +339,13 @@ def collect_reads(pairs, assembly, scaffolds, mismatches, \
             os.system('mkdir -p %s' % (dir))
             reads[scaffold][error] = [{}, '%s/reads.pe.fastq' % (dir)]
     # get reads
-    for id, read in pairs.items():
+    for id, read in list(pairs.items()):
         id, num = id.rsplit('_', 1)
         bit, mate_id, maps, fastq = read
         if mate_id not in pairs:
             continue
         mate = pairs[mate_id]
-        for scaffold, mappings in maps.items():
+        for scaffold, mappings in list(maps.items()):
             for mapping in mappings:
                 overlap, mm, sam_info = mapping
                 m_fastq, m_num = mate[3], mate_id.rsplit('_', 1)[1]
@@ -376,8 +376,8 @@ def collect_reads(pairs, assembly, scaffolds, mismatches, \
         for error in reads[scaffold]:
             seqs, name = reads[scaffold][error]
             out = open(name, 'w')
-            for seq in seqs.values()[0:max_pairs]:
-                print >> out, seq
+            for seq in list(seqs.values())[0:max_pairs]:
+                print(seq, file=out)
             out.close()
             reads[scaffold][error] = out.name
     return reads
@@ -388,7 +388,7 @@ def break_by_coverage(assembled, s2c, cov_thresh, ignore_ends = False):
     """
     fragments = [] # fragments = [[[len, header], [sequence]], ...]
     if ignore_ends is False:
-        for id, seq in assembled.items():
+        for id, seq in list(assembled.items()):
             sequence = []
             for i, base in enumerate(s2c[id]):
                 if check_cov(base, cov_thresh) is True:
@@ -402,7 +402,7 @@ def break_by_coverage(assembled, s2c, cov_thresh, ignore_ends = False):
             if sequence != []:
                 fragments.append([[len(sequence), '>%s_e:%s' % (id, start)], ''.join(sequence)])
     else:
-        for id, seq in assembled.items():
+        for id, seq in list(assembled.items()):
             sequence = []
             for i, base in enumerate(s2c[id]):
                 if check_cov(base, cov_thresh) is True or (i < 100 or i > (seq[1] - 100)):
@@ -433,7 +433,7 @@ def re_assemble_velvet(pr, prefix, scaffold, error, re_assembled_fasta, scaffold
                 continue
             seq[0] = '>%s_e:%s_%s' % (scaffold, error, seq[0].split('>')[1])
             re_assembled_seqs[seq[0].split('>')[1]] = [seq[0], len(seq[1]), seq[1]]
-            print >> re_assembled_fasta, '\n'.join(seq)
+            print('\n'.join(seq), file=re_assembled_fasta)
     return re_assembled_seqs
 
 def re_assemble_errors(reads, prefix, pr, pr_split, threads, cov_thresh, \
@@ -448,21 +448,23 @@ def re_assemble_errors(reads, prefix, pr, pr_split, threads, cov_thresh, \
     re_assembled_seqs = {}
     re_assembled_fasta = open('%s/re_assembled_errors.fa' % (prefix), 'w')
     id2error = {}
-    for scaffold, errors in reads.items():
+    for scaffold, errors in list(reads.items()):
         re_assembled_errors[scaffold] = {}
-        for error, e_pr in errors.items():
+        for error, e_pr in list(errors.items()):
             if assembler == 'velvet':
-                ra = re_assemble_velvet(e_pr, prefix, scaffold, error, re_assembled_fasta, scaffolding, min_contig)
+                ra = re_assemble_velvet(e_pr, prefix, scaffold, error, \
+                                        re_assembled_fasta, scaffolding, \
+                                        min_contig)
             else:
-                print >> sys.stderr, '# specify valid assembler'
+                print('# specify valid assembler', file=sys.stderr)
                 exit()
             if len(ra) == 0:
                 re_assembled_errors[scaffold][error] = False
                 continue
             re_assembled_errors[scaffold][error] = []
-            for i in ra.keys():
+            for i in list(ra.keys()):
                 id2error[i] = [scaffold, error]
-            for seq, info in ra.items():
+            for seq, info in list(ra.items()):
                 re_assembled_seqs[seq] = info
     re_assembled_fasta.close
     mapping, pr_split = map_reads(re_assembled_fasta.name, \
@@ -477,7 +479,7 @@ def re_assemble_errors(reads, prefix, pr, pr_split, threads, cov_thresh, \
     fragments = break_by_coverage(re_assembled_seqs, s2c, cov_thresh, ignore_ends = False)
     f_out = open('%s/re_assembled_fragments.fa' % (prefix), 'w')
     for f in fragments:
-        print >> f_out, '\n'.join([f[0][1], f[1]])
+        print('\n'.join([f[0][1], f[1]]), file=f_out)
         scaffold, error = id2error[f[0][1].split('>')[1].rsplit('_', 1)[0]]
         re_assembled_errors[scaffold][error].append(f)
     f_out.close()
@@ -766,15 +768,15 @@ def merge_assemblies(assembly, scaffolds, s2c, s2errors, \
     merged_report = open('%s/re_assembled.report.txt' % (prefix), 'w')
     if combine_windows is True:
         for s in re_assembled:
-            for w, i in re_assembled[s].items():
+            for w, i in list(re_assembled[s].items()):
                 if type(w) is str:
                     for r in w.split('_'):
                         re_assembled[s][int(r)] = i
                     del re_assembled[s][w]
-    for id, seq in scaffolds.items():
+    for id, seq in list(scaffolds.items()):
         if id not in s2errors: # no errors, print scaffold
             report.append([id, 'none', 'n/a'])
-            print >> merged_assembly, '\n'.join([seq[0], seq[2]])
+            print('\n'.join([seq[0], seq[2]]), file=merged_assembly)
             continue
         errors = sorted(s2errors[id])
         merged = patch_contig(seq, s2c[id], errors, re_assembled[id], cov_thresh)
@@ -794,13 +796,11 @@ def merge_assemblies(assembly, scaffolds, s2c, s2errors, \
 #        merged = [i for i in merged if (len([j for j in i[2] if j.lower() != "n"])/len(i[2])) > 0.5]
         for s in merged:
             report.append([id, s[0], s[1]])
-        print >> merged_assembly, \
-                '\n'.join(['>%s' % (id), ''.join([i[2] for i in merged])])
+        print('\n'.join(['>%s' % (id), ''.join([i[2] for i in merged])]), file=merged_assembly)
     for i in report:
         if i[2] == 'o':
             continue
-        print >> merged_report, \
-                '\t'.join([str(j) for j in i])
+        print('\t'.join([str(j) for j in i]), file=merged_report)
     merged_assembly.close()
     merged_report.close()
     return merged_assembly.name
@@ -832,7 +832,7 @@ def parse_mapping_stringent(mapping, assembly, mm, \
     if mapping is False:
         return pairs, header
     # s2c[scaffold] = [[coverage per position, # reads connecting base to the next base], [p2, pn2]]
-    s2c = {id: [[0, False, False] for i in range(0, info[1])] for id, info in assembly.items()}
+    s2c = {id: [[0, False, False] for i in range(0, info[1])] for id, info in list(assembly.items())}
     for line in open(mapping):
         if line.startswith('@'):
             header.append(line.strip())
@@ -845,6 +845,9 @@ def parse_mapping_stringent(mapping, assembly, mm, \
         read, bit, scaffold, start = line[0:4]
         bit, start = int(bit), int(start)
         r = [start, start + len(line[9]) - 1]
+        # make sure read is > 10 bp long
+        if r[1] - r[0] < 10:
+            continue
         fastq = map_tool.sam2fastq(line)
         info = [line[0:9], line[11:]]
         if '/' in read:
@@ -937,8 +940,8 @@ def format_assembly(fasta, prefix):
     for seq in fix_fasta([fasta], append_index = True, return_original = True):
         original_header, seq = seq
         header = seq[0].split()[0]
-        print >> fixed, '\n'.join([header, seq[1].upper()])
-        print >> lookup, '\t'.join(['>%s' % (' '.join(original_header)), header]) 
+        print('\n'.join([header, seq[1].upper()]), file=fixed)
+        print('\t'.join(['>%s' % (' '.join(original_header)), header]), file=lookup) 
     fixed.close()
     lookup.close()
     return fixed.name
@@ -993,25 +996,25 @@ def find_reads(one, two, inter, js, reads, read_list):
         for i in json_data:
             s2reads.update(json_data[i]['reads']) 
     if read_list is True:
-        print 'samples:'
-        samples = ['   %s' % (i) for i in s2reads.keys()]
-        print '\n'.join(samples)
+        print('samples:')
+        samples = ['   %s' % (i) for i in list(s2reads.keys())]
+        print('\n'.join(samples))
         exit()
     if js is not False and reads is False:
-        print >> sys.stderr, 'specify reads with -reads'
-        print >> sys.stderr, 'use --read_list for list of samples in %s' % (js)
+        print('specify reads with -reads', file=sys.stderr)
+        print('use --read_list for list of samples in %s' % (js), file=sys.stderr)
         exit()
     if js is not False:
         for sample in reads.split(','):
             if sample not in s2reads:
-                print '%s not in %s' % (sample, js)
-                print 'use --read_list for list of samples in %s' % (js)
+                print('%s not in %s' % (sample, js))
+                print('use --read_list for list of samples in %s' % (js))
                 exit()
         one = ','.join([s2reads[i][0] for i in reads.split(',')])
         two = ','.join([s2reads[i][1] for i in reads.split(',')])
     elif (one is False and two is not False) or \
             (one is False and inter is False):
-        print >> sys.stderr, 'specify reads with -1 and -2, -12, or -json'
+        print('specify reads with -1 and -2, -12, or -json', file=sys.stderr)
         exit()
     return one, two, inter
 
@@ -1025,12 +1028,12 @@ def check_previous(directory, overwrite, keep):
     if os.path.exists(directory) is False:
         return
     if overwrite is False and keep is False:
-        print >> sys.stderr, 'output directory found: %s' % (directory)
-        print >> sys.stderr, 'use -f to overwrite (recommended) or -ff to use existing files (not recommended)'
+        print('output directory found: %s' % (directory), file=sys.stderr)
+        print('use -f to overwrite (recommended) or -ff to use existing files (not recommended)', file=sys.stderr)
         exit()
     if overwrite is True and keep is True:
-        print >> sys.stderr, 'output directory found: %s' % (directory)
-        print >> sys.stderr, 'use -f to overwrite (recommended) or -ff to use existing files (not recommended)'
+        print('output directory found: %s' % (directory), file=sys.stderr)
+        print('use -f to overwrite (recommended) or -ff to use existing files (not recommended)', file=sys.stderr)
         exit()
     if overwrite is True:
         shutil.rmtree(directory, ignore_errors = True)

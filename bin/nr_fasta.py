@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/env python3
 
 """
 script for dereplicating fasta files based on sequence names (not sequence similarity)
@@ -44,7 +44,7 @@ def de_rep(fastas, append_index, return_original = False):
 
 if __name__ == '__main__':
     if len(sys.argv) == 1:
-        print 'usage: nr_fasta.py <rename or exclude> <sequence.fasta>'
+        print('usage: nr_fasta.py <rename or exclude> <sequence.fasta>')
         exit()
     option, fastas = sys.argv[1], sys.argv[2:]
     for fasta in fastas:
@@ -55,7 +55,7 @@ if __name__ == '__main__':
     elif option == 'exclude':
         append_index = False
     else:
-        print 'specify rename or exclude for redundant sequences'
+        print('specify rename or exclude for redundant sequences')
         exit()
     for seq in de_rep(fastas, append_index):
-        print '\n'.join(seq)
+        print('\n'.join(seq))

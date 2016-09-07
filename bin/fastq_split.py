@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/env python3
 
 '''
 script for taking an interleaved fastq file and printing the left and
@@ -14,7 +14,7 @@ def split(fastq, prefix):
     f2 = open('%s.R2.fastq' % (prefix), 'w')
     c = cycle([1, 1, 1, 1, 2, 2, 2, 2])
     for line in fastq:
-        n = c.next()
+        n = next(c)
         if n == 1:
             f1.write(line)
         else:
@@ -25,7 +25,7 @@ def split(fastq, prefix):
 
 if __name__ == '__main__':
     if len(sys.argv) != 3:
-        print 'specify fastq file and file prefix'
+        print('specify fastq file and file prefix')
         exit()
     fastq, prefix = sys.argv[1], sys.argv[2]
     if fastq == '-':

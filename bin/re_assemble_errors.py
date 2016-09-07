@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/env python3
 
 """
 script for fixing scaffolding errors by:
@@ -34,10 +34,10 @@ def fastq2fasta(fastq, paired = True):
     c = itertools.cycle([1, 2, 3, 4])
     p = itertools.cycle([1, 2])
     for line in open(fastq):
-        n = c.next()
+        n = next(c)
         if n == 1:
             if paired is True:
-                s = ['%s/%s' % (line.strip().replace('@', '>'), p.next())]
+                s = ['%s/%s' % (line.strip().replace('@', '>'), next(p))]
             else:
                 s = [line.strip().replace('@', '>')]
         elif n == 2:
@@ -108,7 +108,7 @@ def errors_from_cov(s2c, cov_thresh):
     identify errors from low coverage region
     """
     errors = {} # errors[scaffold] = [position of errors]
-    for scaf, cov in s2c.items():
+    for scaf, cov in list(s2c.items()):
         errors[scaf] = []
         prev = False
         for pos, c in enumerate(cov):
@@ -193,16 +193,16 @@ def id_errors(pairs, header, assembly, scaffolds, cov_thresh, mismatches, allow_
     # open sam file for writing
     out = open('%s.both.sam' % (assembly.rsplit('.', 1)[0]), 'w')
     for line in header:
-        print >> out, line
+        print(line, file=out)
     # s2c[scaffold] = [[coverage per position, # reads connecting base to the next base], [p2, pn2]]
-    s2c = {id: [[0, False] for i in range(0, info[1])] for id, info in scaffolds.items()}
+    s2c = {id: [[0, False] for i in range(0, info[1])] for id, info in list(scaffolds.items())}
     # filter reads
-    for read in pairs.values():
+    for read in list(pairs.values()):
         bit, mate, maps, fastq = read
         if mate not in pairs:
             continue
         mate = pairs[mate]
-        for scaffold, mappings in maps.items():
+        for scaffold, mappings in list(maps.items()):
             for mapping in mappings:
                 overlap, mm, sam_info = mapping
                 if scaffold not in mate[2]:
@@ -221,7 +221,7 @@ def id_errors(pairs, header, assembly, scaffolds, cov_thresh, mismatches, allow_
 #                    if mm + mate_mm > mismatches: # total number of mismatches must be less than mismatches
                         continue
                     sam = mapping[2][0] + [read[3][1]] + [read[3][3]] + mapping[2][1]
-                    print >> out, '\t'.join(sam)
+                    print('\t'.join(sam), file=out)
                     s2c = add_coverage(scaffold, scaffolds, overlap, s2c, sam, window)
     errors = errors_from_cov(s2c, cov_thresh)
     return s2c, errors
@@ -233,7 +233,7 @@ def define_windows(scaffolds, s2errors, window, combine_windows):
     """
     # define windows
     s2windows = {} # s2windows[scaffold][error] = [window]
-    for scaffold, errors in s2errors.items():
+    for scaffold, errors in list(s2errors.items()):
         if len(errors) == 0:
             continue
         s2windows[scaffold] = {}
@@ -258,7 +258,7 @@ def define_windows(scaffolds, s2errors, window, combine_windows):
     updated = {}
     for scaffold in s2windows:
         updated[scaffold] = {}
-        errors = sorted(s2windows[scaffold].items(), key = lambda x: x[0])
+        errors = sorted(list(s2windows[scaffold].items()), key = lambda x: x[0])
         if len(errors) > 1:
             i = 1
             for error in errors[1:]:
@@ -297,7 +297,7 @@ def map2window(scaffold, s2windows, s2errors, overlap, m_overlap):
     if scaffold not in s2windows:
         return False
     errors = s2windows[scaffold]
-    for error, window in errors.items():
+    for error, window in list(errors.items()):
         if check_overlap(overlap, window) is True or check_overlap(m_overlap, window) is True:
             matches.append(error)
     if len(matches) == 0:
@@ -321,7 +321,7 @@ def collect_reads(pairs, assembly, scaffolds, mismatches, prefix, s2errors = Fal
     # make files for reads
     reads = {} # reads[scaffold][error] = pe
     if window is not False:
-        for scaffold, errors in s2windows.items():
+        for scaffold, errors in list(s2windows.items()):
             if len(errors) == 0:
                 continue
             reads[scaffold] = {}
@@ -333,13 +333,13 @@ def collect_reads(pairs, assembly, scaffolds, mismatches, prefix, s2errors = Fal
         reads[False] = {}
         reads[False][False] = [{}, '%s.one.pe.fastq' % (assembly.rsplit('.', 1)[0])]
     # get reads
-    for id, read in pairs.items():
+    for id, read in list(pairs.items()):
         id, num = id.rsplit('_', 1)
         bit, mate_id, maps, fastq = read
         if mate_id not in pairs:
             continue
         mate = pairs[mate_id]
-        for scaffold, mappings in maps.items():
+        for scaffold, mappings in list(maps.items()):
             for mapping in mappings:
                 overlap, mm, sam_info = mapping
                 m_fastq, m_num = mate[3], mate_id.rsplit('_', 1)[1]
@@ -373,8 +373,8 @@ def collect_reads(pairs, assembly, scaffolds, mismatches, prefix, s2errors = Fal
         for error in reads[scaffold]:
             seqs, name = reads[scaffold][error]
             out = open(name, 'w')
-            for seq in seqs.values():
-                print >> out, seq
+            for seq in list(seqs.values()):
+                print(seq, file=out)
             out.close()
             reads[scaffold][error] = out.name
     return reads
@@ -385,7 +385,7 @@ def break_by_coverage(assembled, s2c, cov_thresh, ignore_ends = False):
     """
     fragments = [] # fragments = [[[len, header], [sequence]], ...]
     if ignore_ends is False:
-        for id, seq in assembled.items():
+        for id, seq in list(assembled.items()):
             sequence = []
             for i, base in enumerate(s2c[id]):
                 if check_cov(base, cov_thresh) is True:
@@ -399,7 +399,7 @@ def break_by_coverage(assembled, s2c, cov_thresh, ignore_ends = False):
             if sequence != []:
                 fragments.append([[len(sequence), '>%s_f:%s' % (id, start)], ''.join(sequence)])
     else:
-        for id, seq in assembled.items():
+        for id, seq in list(assembled.items()):
             sequence = []
             for i, base in enumerate(s2c[id]):
                 if check_cov(base, cov_thresh) is True or (i < 100 or i > (seq[1] - 100)):
@@ -429,7 +429,7 @@ def re_assemble_velvet(pr, prefix, scaffold, error, scaffolding, min_contig):
             if seq[0] == []:
                 continue
             re_assembled_seqs[seq[0].split('>')[1]] = [seq[0], len(seq[1]), seq[1]]
-            print >> assembled_fasta, '\n'.join(seq)
+            print('\n'.join(seq), file=assembled_fasta)
     assembled_fasta.close()
     return assembled_fasta.name, re_assembled_seqs
 
@@ -459,7 +459,7 @@ def re_assemble_minimo(pr, prefix, scaffold, error, min_contig):
         return assembled_fasta, re_assembled_seqs
     fasta = open('%s.fa' % (pr.rsplit('.', 2)[0]), 'w')
     for seq in fastq2fasta(pr, True):
-        print >> fasta, '\n'.join(seq)
+        print('\n'.join(seq), file=fasta)
     fasta.close()
     p = subprocess.Popen('cd %s; Minimo reads.fa \
             -D MIN_LEN=50 -D MIN_IDENT=98 -D FASTA_EXP=1 -D OUT_PREFIX=minimo -D ACE_EXP=0 > minimo.log; \
@@ -496,7 +496,7 @@ def re_assemble_idba_ud(pr, prefix, scaffold, error, min_contig, threads):
         return assembled_fasta, re_assembled_seqs
     fasta = open('%s.fa' % (pr.rsplit('.', 2)[0]), 'w')
     for seq in fastq2fasta(pr, True):
-        print >> fasta, '\n'.join(seq)
+        print('\n'.join(seq), file=fasta)
     fasta.close()
     p = subprocess.Popen('idba_ud --step 10 --pre_correction --similar 0.98  -r %s -o %s --num_threads %s --min_contig %s \
             >> idba_ud.log 2>> idba_ud.log' \
@@ -511,9 +511,9 @@ def re_assemble_fragments(reads, prefix, threads, cov_thresh, mismatches, multip
     * assembler == 'velvet' or 'shorty'
     """
     re_assembled = {}
-    for scaffold, errors in reads.items():
+    for scaffold, errors in list(reads.items()):
         re_assembled[scaffold] = {}
-        for error, pr in errors.items():
+        for error, pr in list(errors.items()):
             if assembler == 'velvet':
                 assembled_fasta, re_assembled_seqs = \
                         re_assemble_velvet(pr, prefix, scaffold, error, scaffolding, min_contig)
@@ -527,7 +527,7 @@ def re_assemble_fragments(reads, prefix, threads, cov_thresh, mismatches, multip
                 assembled_fasta, re_assembled_seqs = \
                         re_assemble_idba_ud(pr, prefix, scaffold, error, min_contig, threads)
             else:
-                print >> sys.stderr, '# please specify valid assembler'
+                print('# please specify valid assembler', file=sys.stderr)
                 exit()
             if len(re_assembled_seqs) == 0:
                 re_assembled[scaffold][error] = False
@@ -539,7 +539,7 @@ def re_assemble_fragments(reads, prefix, threads, cov_thresh, mismatches, multip
             fragments = break_by_coverage(re_assembled_seqs, s2c, cov_thresh, ignore_ends = False)
             f_out = open('%s/s_%s_e_%s/fragments.fa' % (prefix, scaffold, error), 'w')
             for f in fragments:
-                print >> f_out, '\n'.join([f[0][1], f[1]])
+                print('\n'.join([f[0][1], f[1]]), file=f_out)
             f_out.close()
             re_assembled[scaffold][error] = fragments
     return re_assembled
@@ -730,7 +730,7 @@ def patch_contig(orig, cov, error, n_error, patches, merged, scaffold, cov_thres
         middle = middle[1]
         merged.append(middle)
         merged.append(origB)
-        print '\t\t fixed'
+        print('\t\t fixed')
         return merged
     if middle[0] == 1: # was only able to find the start (not the stop) sequence in the re_assembly
         middle = middle[1]
@@ -758,7 +758,7 @@ def patch_contig(orig, cov, error, n_error, patches, merged, scaffold, cov_thres
             return merged
         else:
             merged.append(combined)
-            print '\t\t fixed'
+            print('\t\t fixed')
             return merged
         
 def merge_assemblies(assembly, scaffolds, s2c, s2errors, re_assembled, combine_windows, prefix, cov_thresh):
@@ -768,20 +768,20 @@ def merge_assemblies(assembly, scaffolds, s2c, s2errors, re_assembled, combine_w
     merged_assembly = open('%s/re_assembled-draft.fa' % (prefix), 'w')
     if combine_windows is True:
         for s in re_assembled:
-            for w, i in re_assembled[s].items():
+            for w, i in list(re_assembled[s].items()):
                 if type(w) is str:
                     for r in w.split('_'):
                         re_assembled[s][int(r)] = i
                     del re_assembled[s][w]
-    for id, seq in scaffolds.items():
-        print id
+    for id, seq in list(scaffolds.items()):
+        print(id)
         merged = []
         if id not in s2errors:
-            print >> merged_assembly, '\n'.join([seq[0], seq[2]])
+            print('\n'.join([seq[0], seq[2]]), file=merged_assembly)
         errors = sorted(s2errors[id])
-        print '\terrors: %s' % (errors)
+        print('\terrors: %s' % (errors))
         for i, error in enumerate(errors):
-            print '\terror: %s' % error
+            print('\terror: %s' % error)
             if (i + 1) >= len(errors):
                 n_error = False
             else:
@@ -789,7 +789,7 @@ def merge_assemblies(assembly, scaffolds, s2c, s2errors, re_assembled, combine_w
             merged = patch_contig(seq[2], s2c[id], error, n_error, re_assembled[id][error], merged, id, cov_thresh)
         if merged is not False:
             merged.insert(0, '>%s\n' % id)
-            print >> merged_assembly, ''.join(merged)
+            print(''.join(merged), file=merged_assembly)
     merged_assembly.close()
     return merged_assembly.name
 
@@ -802,7 +802,7 @@ def final_check(assembly, pr_split, threads, cov_thresh, mismatches, collection_
             check_assembly(assembly, False, threads, cov_thresh, mismatches, collection_mismatches, multiple, prefix, pr_split = pr_split, allow_orphan = False, allow_orphan_ends = True) 
     final_fasta = open('%s/re_assembled-final.fa' % (prefix), 'w')
     for seq in break_by_coverage(scaffolds, s2c, cov_thresh, ignore_ends = False):
-        print >> final_fasta, '\n'.join([seq[0][1], seq[1]])
+        print('\n'.join([seq[0][1], seq[1]]), file=final_fasta)
     final_fasta.close()
     # check final assembly
     return check_assembly(final_fasta.name, False, threads, cov_thresh, mismatches, collection_mismatches, multiple, prefix, pr_split = pr_split, allow_orphan = False, allow_orphan_ends = True)
@@ -876,7 +876,7 @@ def format_assembly(fasta, prefix):
     else:
         fixed = open('%s/%s' % (prefix, fasta), 'w')
     for seq in fix_fasta(fasta):
-        print >> fixed, '\n'.join(seq)
+        print('\n'.join(seq), file=fixed)
     fixed.close()
     return fixed.name
 
@@ -895,8 +895,7 @@ def curate_assembly(assembly, pr, pr_split, prefix, \
 
 if __name__ == '__main__':
     if len(sys.argv) != 7:
-        print >> sys.stderr, \
-        'specify threads, fasta for assembly, mismatches tolerated, paired reads (fastq), pair 1 (fastq), and pair 2 (fastq)'
+        print('specify threads, fasta for assembly, mismatches tolerated, paired reads (fastq), pair 1 (fastq), and pair 2 (fastq)', file=sys.stderr)
         exit()
     for i, v in enumerate(sys.argv[3:], 3):
         if v == 'False' or v == 'FALSE' or v == 'false':

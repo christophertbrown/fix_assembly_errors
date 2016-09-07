@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/env python3
 
 """
 script for checking to see if a file exists
@@ -16,9 +16,9 @@ def check(file):
 	try:
 		open(file)
 		return True
-	except (OSError, IOError), e:
+	except (OSError, IOError) as e:
 		return False
 
 if __name__ == "__main__":
 	file = sys.argv[1]
-	print check(file)
+	print(check(file))

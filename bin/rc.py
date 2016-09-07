@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/env python3
 
 """
 script for getting the reverse complement of a nucleotide sequence
@@ -36,7 +36,7 @@ def reverse_complement(seq):
 	
 if __name__ == '__main__':
 	if len(sys.argv) != 3:
-		print 'specify fasta or - if from stdin and c (for complement) or rc (for reverse complement)'
+		print('specify fasta or - if from stdin and c (for complement) or rc (for reverse complement)')
 		exit()
 	fasta, option = sys.argv[1], sys.argv[2]
 	if fasta == '-':
@@ -45,11 +45,11 @@ if __name__ == '__main__':
 		fasta = open(fasta)
 	if option == 'c':
 		for seq in parse_fasta(fasta):
-			print '\n'.join(complement(seq))
+			print('\n'.join(complement(seq)))
 	elif option == 'rc':
 		for seq in parse_fasta(fasta):
-			print '\n'.join(reverse_complement(seq))
+			print('\n'.join(reverse_complement(seq)))
 	else:
-		print 'specify fasta or - if from stdin \
-				and c (for complement) or rc (for reverse complement)'
+		print('specify fasta or - if from stdin \
+				and c (for complement) or rc (for reverse complement)')
 		exit()

@@ -1,0 +1,26 @@
+This repository contains scripts for microbial genome sequence curation. The key scripts are re_assemble_errors.py, ra2.py, and mapped.py. 
+
+The scripts require python3 and the following programs:
+velvet
+Bowtie2
+
+The basic method for identifying and resolving assembly errors is described in:
+
+C. T. Brown, L. A. Hug, B. C. Thomas, I. Sharon, and C. J. Castelle, “Unusual biology across a group comprising more than 15% of domain Bacteria,” Nature, 2015.
+
+The general strategy is to identify assembly errors as regions with zero coverage by stringently mapped reads, and then attempt to corrected them by re-assembling the region of the genome with the error using velvet. Reads (and their pairs) that mapped to the region containing the error are used in the re-assembly. The re-assembled fragments are then checked for errors and incorporated into the scaffold if possible. See docs/ra2_assembly_curation.pdf for more information. 
+
+The original version of the software (re_assemble_errors.py) would break scaffolds at errors if they could not be corrected. The updated version (ra2.py) will only break scaffolds at errors when 1) the error could not be corrected and 2) the region is not spanned by paired read sequences.
+
+ra2.py output will be in <genome>.curated directory: 
+* re_assembled.fa: curated genome
+* re_assembled.report.txt: report (e = extended, n = error that was not fixed, f = error that was fixed, b = scaffold broken at error)
+
+See genome_curation_using_ra2.rtf for more information and example usage in the context of genome curation. 
+
+mapped.py is a script for filtering SAM files based on the number of mismatches in the read mapping. 
+
+Note: These scripts have been tested on Mac and Linux systems, but may not work with Windows.
+
+Chris Brown
+ctb@berkeley.edu
