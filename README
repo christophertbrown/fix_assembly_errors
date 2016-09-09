@@ -3,6 +3,7 @@ This repository contains scripts for microbial genome sequence curation. The key
 The scripts require python3 and the following programs:
 velvet
 Bowtie2
+shrinksam (https://github.com/bcthomas/shrinksam)
 
 The basic method for identifying and resolving assembly errors is described in:
 
