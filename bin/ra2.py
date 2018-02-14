@@ -9,8 +9,8 @@ Script for fixing scaffolding errors.
     error-containing region (stringent mapping for one read in a pair).
  3. Errors are replaced with the re-assembled sequence, if successful.
  4. Errors that could not be fixed are either left alone or replaced with
-    Ns (option). 
- 5. Scaffolds are split if insert coverage is zero. 
+    Ns (option).
+ 5. Scaffolds are split if insert coverage is zero.
 
 Chris Brown
 ctb@berkeley.edu
@@ -861,7 +861,7 @@ def parse_mapping_stringent(mapping, assembly, mm, \
         if ends is not False and (r[0] > ends and r[1] < scaffolds[scaffold][1] - ends):
             continue
         if min([i[0] for i in s2c[scaffold][r[0]:r[1]]]) >= max_cov:
-            continue 
+            continue
         s2c = add_coverage(scaffold, assembly, r, s2c, line, window = 0)
         pairs = add_read(pairs, read, info, r, bit, mate, fastq, mismatches, scaffold)
     return pairs, header

@@ -321,7 +321,7 @@ def align_pair(pars):
     A, B = pair
     Astart = len(A) - pars['min_overlap']
     Bstart = 0
-    Bend = pars['min_overlap'] - 1
+    Bend = pars['min_overlap']
     Blen = len(B)
     Lext = Blen - Bend
     alignments = []
@@ -353,7 +353,7 @@ def align_pair(pars):
 
 def read_graph(reads, pars):
     """
-    creat directed network representating pairwise
+    create directed network representating pairwise
     read comparisons
     """
     G = nx.DiGraph()
