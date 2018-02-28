@@ -22,24 +22,23 @@ to-do
 """
 
 # python modules
-import sys
-import os
-import itertools
-from glob import glob as glob
-import subprocess
 import re
-import argparse
+import os
+import sys
 import json
 import shutil
+import argparse
+import itertools
+import subprocess
+from glob import glob as glob
 
 # ctb modules
-sys.path.append('/home/cbrown/bioscripts/bin')
-import mapped as map_tool
-from fastq_split import split as fastq_split
-from nr_fasta import de_rep as fix_fasta
-from fasta import iterate_fasta as parse_fasta
-from assemble import velvet as velvet
-from rc import reverse_complement as rc
+import ctbBio.mapped as map_tool
+from ctbBio.fastq_split import split as fastq_split
+from ctbBio.nr_fasta import de_rep as fix_fasta
+from ctbBio.fasta import iterate_fasta as parse_fasta
+from ctbBio.rc import reverse_complement as rc
+from ctbRA.assemble import velvet as velvet
 
 def run_bowtie(assembly, sam, pr, pr_split, sr, threads, multiple, bt_dir):
     """
@@ -149,7 +148,7 @@ def check_mm(sam, window, read_length):
     """
     make sure mismatches are not in window at beginning or end of read
     if mismatches are in the beginning or end of the read, return False
-    """ 
+    """
     mm = map_tool.count_mismatches(sam)
     if mm is False:
         return True

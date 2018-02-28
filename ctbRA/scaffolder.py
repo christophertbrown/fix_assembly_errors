@@ -4,15 +4,15 @@
 script for scaffolding contigs based on paired read coverage
 """
 
-import sys
 import os
-import re_assemble_errors as curate
-from search import search as search
-from fasta import iterate_fasta as parse_fasta
+import sys
 import networkx as nx
-from rc import reverse_complement as rc
 from operator import itemgetter
-#import matplotlib.pyplot as plt
+
+import ctbRA.re_assemble_errors as curate
+from ctbBio.search import search as search
+from ctbBio.fasta import iterate_fasta as parse_fasta
+from ctbBio.rc import reverse_complement as rc
 
 def combine_fastas(fastas, out):
     """
@@ -178,7 +178,7 @@ def filter_graph_mapping(joins, graph, pr, threads, prefix, pr_split, mismatches
     pairs, header = curate.parse_mapping(mapping)
     s2c, s2errors = curate.id_errors(\
             pairs, header, joins[0], joins[1], cov_thresh = 1, mismatches = mismatches, allow_orphan = True)
-    for node, connections in graph.adjacency_iter():
+    for node, connections in graph.adjacency():
         for c, info in list(connections.items()):
             if 'dir_id' not in info:
                 continue
@@ -212,7 +212,7 @@ def filter_graph_best(graph, prefix):
     """
     filtered = nx.DiGraph()
     # filter in forward direction
-    for node, connections in graph.adjacency_iter():
+    for node, connections in graph.adjacency():
         successors = graph.successors(node)
         # how far does each successor extend through the graph?
         length_connections = [follow_path(c, graph, graph[node][c]['bases_added']) for c in successors]
@@ -220,9 +220,9 @@ def filter_graph_best(graph, prefix):
         if len(ranked) == 0:
             continue
         best = ranked[0][1]
-        filtered.add_edge(node, best, graph[node][best])
+        filtered.add_edge(node, best, **graph[node][best])
     # remove multiple nodes
-    for node, connections in filtered.adjacency_iter():
+    for node, connections in filtered.adjacency():
         if filtered.in_degree(node) <= 1:
             continue
         prev = [[filtered[i][node]['bases_added'], i] for i in filtered.predecessors(node)]
@@ -234,7 +234,7 @@ def filter_graph_best(graph, prefix):
             data = ['dir_id', 'id', 'join_pos', 'bases_added', 'pident', 'bit'])
 #    nx.draw_graphviz(filtered, node_size = 21, width = 0.1, font_size = 0.9)
 #    plt.savefig('%s/2.best-connections.network.pdf' % (prefix))
-    return filtered 
+    return filtered
 
 def order_group(graph, group):
     """
@@ -244,14 +244,14 @@ def order_group(graph, group):
     first = [n for n in group if graph.in_degree(n) == 0][0]
     prev = first
     while prev is not False:
-        successor = graph.successors(prev)
+        successor = [i for i in graph.successors(prev)]
         if len(successor) == 0:
             prev = False
             break
         successor = successor[0]
         ordered.append([prev, successor, graph[prev][successor]['id']])
         prev = successor
-    return ordered 
+    return ordered
 
 def check_contig(group, contigs):
     """
@@ -293,7 +293,7 @@ def scaffold_contigs(contigs, id2scaffolds, graph, prefix):
         print(''.join(seq), file=fasta)
     fasta.close()
     return [fasta.name, scaffolds]
-    
+
 def scaffolder(contigs, pr, pr_split, prefix, threads, mismatches, collection_mismatches = 2, overlap = 0.90):
     """
     scaffold contigs based on overlap, paired read support, and paired read confirmation of scaffold
@@ -322,7 +322,7 @@ def scaffolder(contigs, pr, pr_split, prefix, threads, mismatches, collection_mi
     # create network of contig connections
     graph, joins, id2scaffolds = network_contigs(contigs[1], extensions, blast_out, overlap, prefix)
     # check joined contigs with paired read mapping
-    graph = filter_graph_mapping(joins, graph, pr, threads, prefix, pr_split, mismatches) 
+    graph = filter_graph_mapping(joins, graph, pr, threads, prefix, pr_split, mismatches)
     # find best path through graph
     graph = filter_graph_best(graph, prefix)
     # scaffold contigs based on graph

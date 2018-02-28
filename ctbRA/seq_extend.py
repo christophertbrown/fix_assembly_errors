@@ -17,7 +17,7 @@ from matplotlib import pyplot as plt
 from Levenshtein import distance as ldist
 
 # ctb
-from fasta import iterate_fasta as parse_fasta
+from ctbBio.fasta import iterate_fasta as parse_fasta
 
 def parse_fastq(fastq):
     """

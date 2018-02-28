@@ -7,25 +7,24 @@ script for fixing scaffolding errors by:
  3. re-assembling collected reads
  4. merging the new assembly with the old assembly
  5. doing a final check of the re-assembled scaffolds
-(this could be made iterative, or combined with a re-assembly step using the final assembly and 
+(this could be made iterative, or combined with a re-assembly step using the final assembly and
  reads mapping to the final assembly - stringent mapping for one read in the pair, ideally)
 """
 
-import sys
 import os
-import itertools
-from glob import glob as glob
-import subprocess
 import re
+import sys
+import itertools
+import subprocess
+from glob import glob as glob
 
 # ctb
-sys.path.append('/home/cbrown/bioscripts/bin')
-import mapped as map_tool
-from fastq_split import split as fastq_split
-from fix_fasta import fix_fasta as fix_fasta
-from fasta import iterate_fasta as parse_fasta
-from assemble import velvet as velvet
-from rc import reverse_complement as rc
+import ctbBio.mapped as map_tool
+from ctbBio.rc import reverse_complement as rc
+from ctbBio.fastq_split import split as fastq_split
+from ctbBio.fix_fasta import fix_fasta as fix_fasta
+from ctbBio.fasta import iterate_fasta as parse_fasta
+from ctbRA.assemble import velvet as velvet
 
 def fastq2fasta(fastq, paired = True):
     """
@@ -242,12 +241,12 @@ def define_windows(scaffolds, s2errors, window, combine_windows):
             if start < 0:
                 start = 0
                 stop = window
-                if stop > scaffolds[scaffold]:
-                    stop = scaffolds[scaffold]
+                if stop > scaffolds[scaffold][1]:
+                    stop = scaffolds[scaffold][1]
             else:
                 stop = (error + int(window/2))
-                if stop > scaffolds[scaffold]:
-                    stop = scaffolds[scaffold]
+                if stop > scaffolds[scaffold][1]:
+                    stop = scaffolds[scaffold][1]
                     start = stop - window
                     if start < 0:
                         start = 0
@@ -275,6 +274,7 @@ def define_windows(scaffolds, s2errors, window, combine_windows):
             updated[scaffold][error[0]] = error[1]
     return updated
 
+
 def get_overlap(a, b):
     return max(0, min(a[1], b[1]) - max(a[0], b[0]))
 
@@ -288,7 +288,7 @@ def check_overlap(overlap, window):
         return True
     return False
 
-def map2window(scaffold, s2windows, s2errors, overlap, m_overlap): 
+def map2window(scaffold, s2windows, s2errors, overlap, m_overlap):
     """
     determine if reads maps within window
     return errors that reads map to, or False
