@@ -713,13 +713,16 @@ def patch_contig(seq, cov, errors, scaffold_patches, cov_thresh, k = 10, buffer 
                 continue
     return merged
 
-def replace_N(merged):
+def replace_N(merged, min_Ns):
     """
     replace errors that could not be fixed with Ns
     """
     for i, s in enumerate(merged):
         if s[1] == 'n':
-            merged[i] = [s[0], s[1], "N"*len(s[2])]
+            length = len(s[2])
+            if length < min_Ns:
+                length = min_Ns
+            merged[i] = [s[0], s[1], "N"*length]
     return merged
 
 def mask_errors(merged):
@@ -755,9 +758,9 @@ def break_scaf(scaffold, merged, break_scaffolds, ignore_insert, coverage):
                 merged[i] = [s[0], 'b', '']
     return merged
 
-def merge_assemblies(assembly, scaffolds, s2c, s2errors, \
-        re_assembled, combine_windows, prefix, cov_thresh, \
-        break_scaffolds, extend_scaffolds, add_Ns, mask, ignore_insert):
+def merge_assemblies(assembly, scaffolds, s2c, s2errors,
+        re_assembled, combine_windows, prefix, cov_thresh,
+        break_scaffolds, extend_scaffolds, add_Ns, min_Ns, mask, ignore_insert):
     """
     replace errors with re-assembly
     report = [[scaffold, error, code], ... [scaffold, error, code]]
@@ -785,7 +788,7 @@ def merge_assemblies(assembly, scaffolds, s2c, s2errors, \
         if extend_scaffolds is False:
             merged = [i for i in merged if i[1] != 'e']
         if add_Ns is True:
-            merged = replace_N(merged)
+            merged = replace_N(merged, min_Ns)
         if mask is True:
             merged = mask_errors(merged)
         merged = break_scaf(id, merged, break_scaffolds, ignore_insert, s2c[id])
@@ -940,7 +943,7 @@ def format_assembly(fasta, prefix):
         original_header, seq = seq
         header = seq[0].split()[0]
         print('\n'.join([header, seq[1].upper()]), file=fixed)
-        print('\t'.join(['>%s' % (' '.join(original_header)), header]), file=lookup) 
+        print('\t'.join(['>%s' % (' '.join(original_header)), header]), file=lookup)
     fixed.close()
     lookup.close()
     return fixed.name
@@ -958,12 +961,12 @@ def cleanup(prefix):
         for name in dirs:
             os.rmdir(os.path.join(root, name))
 
-def curate_assembly(assembly, pr, pr_split, prefix, \
-        threads = 6, mismatches = 1, collection_mismatches = 2, \
-        window = 10000, combine_windows = True, cov_thresh = 1, \
-        multiple = True, assembler = 'velvet', \
-        break_scaffolds = False, extend_scaffolds = False, \
-        save_mapping = False, save_int = False, add_Ns = False, \
+def curate_assembly(assembly, pr, pr_split, prefix,
+        threads = 6, mismatches = 1, collection_mismatches = 2,
+        window = 10000, combine_windows = True, cov_thresh = 1,
+        multiple = True, assembler = 'velvet',
+        break_scaffolds = False, extend_scaffolds = False,
+        save_mapping = False, save_int = False, add_Ns = False, min_Ns = 0,
         mask = False, ignore_insert = False):
     """
     identify and correct assembly errors
@@ -974,13 +977,13 @@ def curate_assembly(assembly, pr, pr_split, prefix, \
             check_assembly(assembly, pr, threads, cov_thresh, \
             mismatches, collection_mismatches, multiple, prefix, \
             window, combine_windows, pr_split = pr_split, \
-            allow_orphan = False, allow_orphan_ends = False, save_mapping = save_mapping) 
+            allow_orphan = False, allow_orphan_ends = False, save_mapping = save_mapping)
     re_assembled = re_assemble_errors(mapped_reads, prefix, pr, pr_split, \
             threads, cov_thresh, mismatches, multiple, assembler = assembler, \
             save_mapping = save_mapping)
     merged = merge_assemblies(assembly, scaffolds, s2c, s2errors, re_assembled, \
             combine_windows, prefix, cov_thresh, break_scaffolds, extend_scaffolds, \
-            add_Ns, mask, ignore_insert)
+            add_Ns, min_Ns, mask, ignore_insert)
     if save_int is False:
         cleanup(prefix)
 
@@ -993,7 +996,7 @@ def find_reads(one, two, inter, js, reads, read_list):
         with open(js) as handle:
             json_data = json.load(handle)
         for i in json_data:
-            s2reads.update(json_data[i]['reads']) 
+            s2reads.update(json_data[i]['reads'])
     if read_list is True:
         print('samples:')
         samples = ['   %s' % (i) for i in list(s2reads.keys())]
@@ -1079,6 +1082,9 @@ if __name__ == '__main__':
             '--add-Ns', action = 'store_true', \
             help = 'replace errors that could not be corrected with Ns')
     parser.add_argument(\
+            '-N', required = False, default = 50, type = int, \
+            help = 'min. number of Ns for filling gaps (default = 50)')
+    parser.add_argument(\
             '--break', action = 'store_true', \
             help = 'break scaffold if error could not be corrected')
     parser.add_argument(\
@@ -1109,8 +1115,10 @@ if __name__ == '__main__':
     window = args['w']
     prefix = '%s.curated' % (fasta.split('/')[-1].rsplit('.', 1)[0])
     check_previous(prefix, args['f'], args['ff'])
-    curate_assembly(fasta, inter, [one, two], prefix, \
-            threads = args['t'], mismatches = args['m'], \
-            collection_mismatches = args['c'], break_scaffolds = args['break'], \
-            extend_scaffolds = args['extend'], save_mapping = args['mapping'], save_int = args['save_int'], \
-            add_Ns = args['add_Ns'], mask = args['mask'], ignore_insert = args['ignore_insert_cov'], window = window)
+    curate_assembly(fasta, inter, [one, two], prefix,
+            threads = args['t'], mismatches = args['m'],
+            collection_mismatches = args['c'], break_scaffolds = args['break'],
+            extend_scaffolds = args['extend'], save_mapping = args['mapping'],
+            save_int = args['save_int'], add_Ns = args['add_Ns'], min_Ns = args['N'],
+            mask = args['mask'], ignore_insert = args['ignore_insert_cov'],
+            window = window)
