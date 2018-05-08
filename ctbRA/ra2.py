@@ -14,11 +14,6 @@ Script for fixing scaffolding errors.
 
 Chris Brown
 ctb@berkeley.edu
-
-to-do
-* add length of errors to report
-* check bowtie insert length parameters
-* save log of bowtie commands
 """
 
 # python modules
@@ -127,7 +122,7 @@ def mm_positions_from_md(sam, read_length):
     """
     positions = False
     md = [i.rsplit(':', 1)[1] for i in sam if i.startswith('MD:Z:')][0]
-    if '^' in md or '+' in md: # do not count reads with indels 
+    if '^' in md or '+' in md: # do not count reads with indels
         return True
     if md == str(read_length - 1):
         return positions
@@ -300,7 +295,7 @@ def check_overlap(overlap, window):
         return True
     return False
 
-def map2window(scaffold, s2windows, s2errors, overlap, m_overlap): 
+def map2window(scaffold, s2windows, s2errors, overlap, m_overlap):
     """
     determine if reads maps within window
     return errors that reads map to, or False
@@ -554,15 +549,15 @@ def patch_middle(orig, cov, error, n_error, patches, k, origA, origB, origM, sta
         p_start = patch.find(start)
         if p_start == -1:
             patch = rc(['', patch])[1]
-            p_start = patch.find(start) 
+            p_start = patch.find(start)
         if p_start == -1:
             continue
         p = patch[(p_start + k + buffer):]
         attemptsA.append([len(p), p])
-        p_stop = patch.find(stop) 
+        p_stop = patch.find(stop)
         if p_stop == -1:
             patch = rc(['', patch])[1]
-            p_stop = patch.find(stop) 
+            p_stop = patch.find(stop)
         if p_stop == -1:
             continue
         p = patch[(p_start + k + buffer):(p_stop)]
@@ -572,16 +567,16 @@ def patch_middle(orig, cov, error, n_error, patches, k, origA, origB, origM, sta
     attemptsB = []
     for patch in patches: # extend origB if possible
         patch = patch[1].upper()
-        p_start = patch.find(start) 
+        p_start = patch.find(start)
         if p_start == -1:
             patch = rc(['', patch])[1]
-            p_start = patch.find(start) 
+            p_start = patch.find(start)
         if p_start != -1:
             continue
-        p_stop = patch.find(stop) 
+        p_stop = patch.find(stop)
         if p_stop == -1:
             patch = rc(['', patch])[1]
-            p_stop = patch.find(stop) 
+            p_stop = patch.find(stop)
         if p_stop == -1:
             continue
         p = patch[:p_stop]
@@ -601,7 +596,7 @@ def patch_middle(orig, cov, error, n_error, patches, k, origA, origB, origM, sta
         if len(bestB) > 20:
             return [2, bestB]
     return False # could not find start and stop in any fragment
- 
+
 def find_start_stop_error(orig, cov, error, n_error, patches, k, cov_thresh, buffer):
     """
     find regions of length k flanking region with error
